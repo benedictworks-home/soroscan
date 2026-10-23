@@ -43,6 +43,29 @@ Tests using `soroscan.settings_test` do not require these variables because the 
 
 Accepted Boolean values include `True`/`False`, `true`/`false`, `1`/`0`, and `yes`/`no`.
 
+## HTTPS and deployment security configuration
+
+Hardening settings consumed by `soroscan.settings` and validated in CI by
+`python manage.py check --deploy --tag security --fail-level WARNING`
+(issue #1722). Except for `SECURE_PROXY_SSL_HEADER`, every value defaults to
+its secure form whenever `DEBUG` is `False`, so production deployments are
+hardened without extra configuration. Override only for non-standard
+topologies (for example, an internal deployment that does not terminate TLS
+in front of Django).
+
+| Variable                       | Type          | Required | Default                                        | Description                                                                                                    |
+| ------------------------------ | ------------- | -------: | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `SESSION_COOKIE_SECURE`        | Boolean       |       No | `True` when `DEBUG` is `False`                 | Serve session cookies over HTTPS only.                                                                         |
+| `CSRF_COOKIE_SECURE`           | Boolean       |       No | `True` when `DEBUG` is `False`                 | Serve CSRF cookies over HTTPS only.                                                                            |
+| `SECURE_SSL_REDIRECT`          | Boolean       |       No | `True` when `DEBUG` is `False`                 | Redirect non-HTTPS requests to HTTPS. The TLS-terminating proxy must set `X-Forwarded-Proto`.                  |
+| `SECURE_HSTS_SECONDS`          | Integer secs  |       No | `31536000` when `DEBUG` is `False`, else `0`   | HTTP Strict Transport Security max-age. One year matches `docs/deployment/security.md`.                        |
+| `SECURE_HSTS_INCLUDE_SUBDOMAINS`| Boolean      |       No | `True` when `DEBUG` is `False`                 | Apply HSTS to all subdomains. Only enable when every subdomain is served exclusively over SSL.                 |
+| `SECURE_HSTS_PRELOAD`          | Boolean       |       No | `True` when `DEBUG` is `False`                 | Allow submission to the browser HSTS preload list. Read the preload list implications before enabling.          |
+
+`SECURE_PROXY_SSL_HEADER` is fixed to `("HTTP_X_FORWARDED_PROTO", "https")`
+because the backend is deployed behind the TLS-terminating ingress in
+`k8s/ingress.yaml`.
+
 ## Database and connection-pool configuration
 
 | Variable                    | Type            | Required | Default            | Description                                                                         |
