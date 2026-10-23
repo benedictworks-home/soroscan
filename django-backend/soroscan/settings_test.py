@@ -92,6 +92,10 @@ DATABASES = {
     }
 }
 
+# Mirrors the production default so settings-dependent code and tests can rely
+# on the attribute existing (issue #1007).
+DATABASE_STATEMENT_TIMEOUT = 5000
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = []
 
@@ -145,6 +149,13 @@ REST_FRAMEWORK = {
         "dedup_test": "1000/hour",
         "events_search": "1000/hour",
         "contract_stats": "1000/hour",
+        # Missing rates raise ImproperlyConfigured when a view instantiates the
+        # corresponding throttle (e.g. /api/ingest/health/ uses the
+        # unauthenticated_ip scope). Generous limits keep the shared test
+        # process from tripping real throttling. Keep in sync with
+        # soroscan.settings.
+        "db_explain": "1000/hour",
+        "unauthenticated_ip": "1000/hour",
     },
 }
 
