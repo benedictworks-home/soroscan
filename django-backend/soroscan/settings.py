@@ -678,6 +678,24 @@ if SENTRY_DSN:
 
 MAX_REQUEST_BODY_SIZE = env.int("MAX_REQUEST_BODY_SIZE", default=10485760)
 
+# HTTPS / deployment security hardening (issue #1722).
+# Enabled by default whenever DEBUG is off so production deployments pass
+# `python manage.py check --deploy` (run in CI against these settings).
+# The app runs behind a TLS-terminating reverse proxy / ingress that sets
+# X-Forwarded-Proto (see k8s/ingress.yaml); each value can be overridden
+# via environment variable for non-standard topologies.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=not DEBUG)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=not DEBUG)
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=not DEBUG)
+SECURE_HSTS_SECONDS = env.int(
+    "SECURE_HSTS_SECONDS", default=31536000 if not DEBUG else 0
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=not DEBUG
+)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=not DEBUG)
+
 DEPRECATED_ENDPOINTS = {
     "/api/audit-trail/": {
         "sunset": "2026-12-31",
