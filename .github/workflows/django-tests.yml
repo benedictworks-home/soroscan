@@ -110,6 +110,48 @@ jobs:
           name: backend-coverage
           fail_ci_if_error: false
 
+  deploy-check:
+    name: Deployment security checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "django-backend/requirements.txt"
+
+      - name: Install dependencies
+        working-directory: django-backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      # Runs Django's deployment checks against the production settings module.
+      # --fail-level WARNING makes any security warning (DEBUG, secure cookies,
+      # HSTS, SSL redirect, allowed hosts) fail the job instead of scrolling
+      # by unnoticed. Non-zero exit from `manage.py check` fails the step.
+      - name: Run Django deployment checks (check --deploy)
+        working-directory: django-backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_soroscan
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: ci-dummy-deploy-check-secret-key-not-a-real-key-0123456789
+          DEBUG: "False"
+          ALLOWED_HOSTS: api.soroscan.io
+          DJANGO_SETTINGS_MODULE: soroscan.settings
+          CELERY_TASK_ALWAYS_EAGER: "True"
+          SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+          STELLAR_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015"
+          SOROSCAN_CONTRACT_ID: CCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          WEBHOOK_DELIVERY_RETENTION_DAYS: "30"
+          LOG_FORMAT: ""
+          SENTRY_DSN: ""
+        run: python manage.py check --deploy --tag security --fail-level WARNING
+
   migration-rollbacks:
     name: Migration rollback tests
     runs-on: ubuntu-latest
